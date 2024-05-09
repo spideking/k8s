@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pvc-test-demo-2
+
+---
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: pvc-demo-nginx
+  namespace: pvc-test-demo-2
+provisioner: kubernetes.io/azure-file # replace with "kubernetes.io/azure-file" if aks version is less than 1.21
+allowVolumeExpansion: true
+mountOptions:
+ - dir_mode=0777
+ - file_mode=0777
+ - uid=0
+ - gid=0
+ - mfsymlinks
+ - cache=strict
+ - actimeo=30
+parameters:
+  skuName: Premium_LRS
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-demo-nginx
+  namespace: pvc-test-demo-2
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: pvc-demo-nginx
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   labels:
+#     app: nginxapp
+#   name: nginxapp
+#   namespace: pvc-test-demo-2
+# spec:
+#   replicas: 2
+#   volumes:
+#     - name: nginx-claim
+#       persistentVolumeClaim:
+#         claimName: pvc-demo-nginx
+#   selector:
+#     matchLabels:
+#       app: nginxapp
+#   template:
+#     metadata:
+#       labels:
+#         app: nginxapp
+#     spec:
+#       containers:
+#       - name: nginx
+#         image: nginx:latest
+#         ports:
+#         - containerPort: 80
+#         volumeMounts:
+#         - name: nginx-claim
+#           mountPath: /usr/share/nginx/html
+
+# kind: Pod
+# apiVersion: v1
+# metadata:
+#   name: test-doc2
+#   namespace: pvc-test-demo
+# spec:
+#   containers:
+#     - name: test-doc2-container
+#       image: nginx:latest
+#       ports:
+#         - containerPort: 80
+#       volumeMounts:
+#         - mountPath: /usr/share/nginx/html
+#           name: volume
+#           readOnly: false
+#   volumes:
+#    - name: volume
+#      persistentVolumeClaim:
+#        claimName: pvc-demo-nginx
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginxapp
+  namespace: pvc-test-demo
+spec:
+  replicas: 7
+  selector:
+    matchLabels:
+      app: nginxapp
+  template:
+    metadata:
+      labels:
+        app: nginxapp
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-claim
+          mountPath: /usr/share/nginx/html
+      volumes:
+        - name: nginx-claim
+          persistentVolumeClaim:
+            claimName: pvc-demo-nginx
+---
+
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: service-test-doc2
+#   namespace: pvc-test-demo-2
+# spec:
+#   selector:
+#     app: test-doc-nginx2
+#   ports:
+#     - protocol: TCP
+#       port: 8753
+#       targetPort: 80
+#   type: LoadBalancer

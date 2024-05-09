@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pvc-test-demo-3
+
+---
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: pvc-demo-nginx-2
+  namespace: pvc-test-demo-3
+provisioner: kubernetes.io/azure-file
+allowVolumeExpansion: true
+mountOptions:
+ - dir_mode=0777
+ - file_mode=0777
+ - uid=0
+ - gid=0
+ - mfsymlinks
+ - cache=strict
+ - actimeo=30
+parameters:
+  skuName: Premium_LRS
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-demo-nginx-2
+  namespace: pvc-test-demo-3
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: pvc-demo-nginx-2
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginxapp
+  namespace: pvc-test-demo-3
+spec:
+  replicas: 7
+  selector:
+    matchLabels:
+      app: nginxapp-demo
+  template:
+    metadata:
+      labels:
+        app: nginxapp-demo
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-claim
+          mountPath: /usr/share/nginx/html
+      volumes:
+        - name: nginx-claim
+          persistentVolumeClaim:
+            claimName: pvc-demo-nginx-2
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-test-doc7
+  namespace: pvc-test-demo-3
+spec:
+  selector:
+    app: nginxapp-demo
+  ports:
+    - protocol: TCP
+      port: 8753
+      targetPort: 80
+  type: LoadBalancer

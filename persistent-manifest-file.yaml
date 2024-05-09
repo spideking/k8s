@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginxapp
+  namespace: pvc-test-demo
+spec:
+  replicas: 7
+  selector:
+    matchLabels:
+      app: nginxapp
+  template:
+    metadata:
+      labels:
+        app: nginxapp
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-claim
+          mountPath: /usr/share/nginx/html
+      volumes:
+        - name: nginx-claim
+          persistentVolumeClaim:
+            claimName: pvc-demo-nginx

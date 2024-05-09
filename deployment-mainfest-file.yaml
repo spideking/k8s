@@ -1,0 +1,74 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: pvc-demo-nginx
+spec:
+  capacity:
+    storage: 5Gi
+  accessmode:
+    - ReadWriteMany
+  azureFile:
+    secretName: azure-secret
+    shareName: k8-fileshare
+    readOnly: false
+  mountOption:
+    - dir_mode=0777
+    - file_mode=0777
+    - uid=1000
+    - gid=1000
+    - mfsymlinks
+    - nobrl
+
+
+---
+
+# Persistent volume claim
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-demo-nginx 
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 5Gi
+
+
+---
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: test-doc2
+  namespace: pvc-test-demo
+spec:
+  containers:
+    - name: test-doc2-container
+      image: nginx:latest
+      volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: volume
+          readOnly: false
+  volumes:
+   - name: volume
+     persistentVolumeClaim:
+       claimName: pvc-demo-nginx
+
+--- 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-test-doc2
+  namespace: webpage
+spec:
+  selector:
+    app: test-doc2
+  ports:
+    - protocol: TCP
+      port: 8750
+      targetPort: 80
+  type: LoadBalancer
